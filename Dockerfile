@@ -10,7 +10,7 @@ LABEL org.opencontainers.image.base.name="docker.io/library/nvidia/cuda:11.8.0-d
 # Variables used at build time.
 ## CUDA architectures, required by Colmap and tiny-cuda-nn.
 ## NOTE: All commonly used GPU architectures are included and supported here. To speedup the image build process remove all architectures but the one of your explicit GPU. Find details here: https://developer.nvidia.com/cuda-gpus (8.6 translates to 86 in the line below) or in the docs.
-ARG CUDA_ARCHITECTURES=90;89;86;80;75;70;61;52;37
+ARG CUDA_ARCHITECTURES=86
 
 # Set environment variables.
 ## Set non-interactive to prevent asking for user inputs blocking image creation.
@@ -97,20 +97,22 @@ RUN git clone --branch 3.8 https://github.com/colmap/colmap.git --single-branch 
     rm -rf colmap
 
 # Create non root user and setup environment.
-RUN useradd -m -d /home/user -g root -G sudo -u 1000 user
-RUN usermod -aG sudo user
-# Set user password
-RUN echo "user:user" | chpasswd
-# Ensure sudo group users are not asked for a password when using sudo command by ammending sudoers file
-RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+# RUN useradd -m -d /home/user -g root -G sudo -u 1000 user
+# RUN usermod -aG sudo user
+# # Set user password
+# RUN echo "user:user" | chpasswd
+# # Ensure sudo group users are not asked for a password when using sudo command by ammending sudoers file
+# RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-# Switch to new uer and workdir.
-USER 1000
-WORKDIR /home/user
+# # Switch to new uer and workdir.
+# USER 1000
+USER 2007
+RUN mkdir /home/gooeylouis
+WORKDIR /home/gooeylouis
 
 # Add local user binary folder to PATH variable.
-ENV PATH="${PATH}:/home/user/.local/bin"
-SHELL ["/bin/bash", "-c"]
+ENV PATH="${PATH}:/home/gooeylouis/.local/bin"
+SHELL ["/bin/bash", "-cu"]
 
 # Upgrade pip and install packages.
 RUN python3.10 -m pip install --upgrade pip setuptools pathtools promise pybind11
@@ -147,10 +149,12 @@ RUN git clone --branch main --recursive https://github.com/cvg/pixel-perfect-sfm
 
 RUN python3.10 -m pip install omegaconf
 # Copy nerfstudio folder and give ownership to user.
-ADD . /home/user/nerfstudio
-USER root
-RUN chown -R user /home/user/nerfstudio
-USER 1000
+ADD . /home/gooeylouis/nerfstudio
+
+# WORKDIR /workspace
+# USER root
+# RUN chown -R user /home/user/nerfstudio
+# USER 1000
 
 # Install nerfstudio dependencies.
 RUN cd nerfstudio && \
@@ -161,5 +165,5 @@ RUN cd nerfstudio && \
 WORKDIR /workspace
 
 # Install nerfstudio cli auto completion and enter shell if no command was provided.
+# 
 CMD ns-install-cli --mode install && /bin/bash
-
